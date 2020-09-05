@@ -13,6 +13,7 @@ Set up the database and model.
 2. models:To run ML pipeline that trains classifier and saves
         `python models/train_classifier.py data/DisasterResponse.db models/classifier.pkl`
 3. app: Run web app through  `python run.py`
+
 *Note:Go to http://0.0.0.0:3001/
 
 
