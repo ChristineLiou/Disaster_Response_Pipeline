@@ -4,13 +4,31 @@ import numpy as np
 from sqlalchemy import create_engine
 
 def load_data(messages_filepath, categories_filepath):
+    '''
+    Input: 
+    messages_filepath - the message filepathe
+    categories_filepath - the categories filepathe
+    
+    Output:
+    Merged messages and categories files  
+    
+    load the two csv files and merge them based on the same id'''
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)   
     return  messages.merge(categories,how = 'left',on='id')
 
 
 def clean_data(df):
+    '''
+    Input:
+    df - the merged dataframe
     
+    Output:
+    df - the dataframe after split categories into separate colums and each column only has numbers 0 or 1
+    
+    First, split categories into separate category columns.
+    Second, convert category values to just numbers 0 or 1. 
+    And replace categories column in df with new category columns. '''
     categories = df.categories.str.split(';',expand = True) 
     row = categories.iloc[1]
     category_colnames = row.apply(lambda x:x.split('-')[0])
@@ -30,12 +48,19 @@ def clean_data(df):
     return df
     
 def save_data(df, database_filename):
+    '''
+    Input:
+    df - the dataframe after cleaning
+    database_filename - the file path of database
+    
+    Save the clean dataset into an sqlite database.'''
     engine = create_engine('sqlite:///{}'.format(database_filename))
     
-    df.to_sql('InsertTableName', engine, index=False)
+    df.to_sql('ETLTable', engine, if_exists='replace',index=False)
 
 
 def main():
+    ''''''
     if len(sys.argv) == 4:
 
         messages_filepath, categories_filepath, database_filepath = sys.argv[1:]
