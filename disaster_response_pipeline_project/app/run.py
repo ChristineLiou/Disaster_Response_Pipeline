@@ -1,6 +1,10 @@
 import json
 import plotly
 import pandas as pd
+import numpy as np
+import sqlite3
+from sqlalchemy import create_engine, func, select, MetaData
+from sqlalchemy import *
 
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
@@ -10,6 +14,9 @@ from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
+from plotly.graph_objs import Bar, Heatmap
+import plotly.plotly as py
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 
 
 app = Flask(__name__)
@@ -43,6 +50,36 @@ def index():
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
     
+    # Show distribution of different category
+    category = list(df.columns[4:])
+    category_counts = []
+    for column_name in category:
+        category_counts.append(np.sum(df[column_name]))
+    
+    # extract data Top 10
+    categories = df.iloc[:,4:]
+    categories_mean = categories.mean().sort_values(ascending=False)[1:11]
+    categories_names = list(categories.sum().sort_values(ascending=False)[1:11].index)
+    
+    cats = df[df.columns[5:]]
+    cats_counts = cats.mean()*cats.shape[0]
+
+    nlarge_counts = cats_counts.nlargest(5)
+    nlarge_names = list(nlarge_counts.index)
+    
+    dfnew = df.drop(['id', 'message', 'original', 'genre','child_alone'], axis = 1)
+    corr_list = []
+    correl = dfnew.corr().values
+    for row in correl:
+        corr_list.append(list(row))
+    
+    col_names = [col.replace('_', ' ').title() for col in dfnew.columns]
+    
+    # calculate proportion of each category with label = 1
+    cat_props = df.drop(['id', 'message', 'original', 'genre','child_alone'], axis = 1).sum()/len(df)
+    cat_props = cat_props.sort_values(ascending = False)
+    cat_names = list(cat_props.index)
+
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
     graphs = [
@@ -63,8 +100,67 @@ def index():
                     'title': "Genre"
                 }
             }
+        },
+        {
+            'data': [
+                Bar(
+                    x=nlarge_names,
+                    y=nlarge_counts
+                )
+            ],
+
+            'layout': {
+                'title': 'Top 5 message categories',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Category"
+                }
+            }
+        },
+        {
+            'data': [
+                Heatmap(
+                    z=corr_list, 
+                    x=col_names,
+                    y=col_names,
+                    colorscale='Viridis',
+                )
+            ],
+
+            'layout': {
+                'title': 'Correlation of the messages',
+                'height': 750,
+                'margin': dict(
+                    l = 150,
+                    r = 30, 
+                    b = 160,
+                    t = 30,
+                    pad = 4
+                    ),
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x=cat_names,
+                    y=cat_props
+                )
+            ],
+
+            'layout': {
+                'title': 'Proportion of Messages in different categories',
+                'yaxis': {
+                    'title': "Proportion"
+                },
+                'xaxis': {
+                    'title': "Category",
+                    'tickangle': -45
+                }
+            }
         }
-    ]
+   ]
     
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
