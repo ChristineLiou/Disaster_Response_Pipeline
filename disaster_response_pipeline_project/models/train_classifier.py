@@ -10,6 +10,7 @@ from sqlalchemy import create_engine
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from sklearn.datasets import make_multilabel_classification
+from sklearn.metrics import classification_report
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
@@ -18,19 +19,29 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix
 
 def load_data(database_filepath):
+    '''
+    Input: database_filepath - the file path of database
+    
+    Output:
+    X: the message column
+    Y: the categories related columns
+    categories_name: column names of Y
+    '''
     print("database_filepath",database_filepath.split('/'))
     
     database_path = 'sqlite:///{}'.format(database_filepath)
     engine = create_engine(database_path)
-    df = pd.read_sql('select * from InsertTableName', engine)
+    df = pd.read_sql('select * from ETLTable', engine)
     df.head()
     X = df['message'] 
     Y = df.iloc[:,4:40]
-    
-    return X,Y,df
+    category_names = Y.columns
+    return X,Y,category_names
 
 def tokenize(text):
-   
+    '''
+    Use tokenization function to process text data
+    '''
     tokens = word_tokenize(text)
     
     # initiate lemmatizer
@@ -48,14 +59,13 @@ def tokenize(text):
 
 
 def build_model():
+    '''
+    Build a machine learning pipeline and use grid search to find better parameters.
+    '''
     pipeline = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize)),
         ('tfidf', TfidfTransformer()),
         ('clf', MultiOutputClassifier(KNeighborsClassifier()))])
-    return pipeline
-
-def evaluate_model(model, X_test, Y_test, category_names):
-    y_pred = model.predict(X_test)
     parameters = {
         'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
         'features__text_pipeline__vect__max_df': (0.5, 0.75, 1.0),
@@ -69,10 +79,15 @@ def evaluate_model(model, X_test, Y_test, category_names):
             {'text_pipeline': 0.8, 'starting_verb': 1},
         )
     }
+    cv = GridSearchCV(pipeline, param_grid=parameters)
+    return pipeline
 
-    cv = GridSearchCV(model, param_grid=parameters)
+def evaluate_model(model, X_test, Y_test, category_names):
+    y_pred = model.predict(X_test)
     accuracy = (y_pred == Y_test).mean()
     print("Accuracy:", accuracy)
+    print(classification_report(Y_test, y_pred, target_names=category_names))
+    results = pd.DataFrame(columns=['Category', 'f_score', 'precision', 'recall'])
     
 def save_model(model, model_filepath):
     pkl_filename = "pickle_model.pkl"
