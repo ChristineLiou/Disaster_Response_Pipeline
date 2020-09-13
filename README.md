@@ -1,6 +1,6 @@
 # Disaster_Response_Pipeline
-In this project, I apply disaster data from Figure Eight to build a model for an API that classifies disaster messages.
-Through the resulting Web App, an emergency worker can input a new message and get classification results in several categories. The web app will also display visualizations of the data.
+In this project, I apply disaster data from Figure Eight to build a model for an API that classifies disaster messages.The data set is the real messages that were sent during disaster events.The machine learning pipeline was created to categorize these events. As a result, the outcome message could be sent to an appropriate disaster relief agency.
+Besides the project also provides Web App, which let an emergency worker input a new message and get classification results in several categories. The web app will also display visualizations of the data.
 
 ### File Description:
 - Jupyternote book: 
